@@ -1,4 +1,5 @@
 ﻿using BenchmarkDotNet.Running;
+using System.Text;
 
 namespace TLCS {
 	public static class Program {
@@ -6,21 +7,15 @@ namespace TLCS {
 			string input = "3.133  + 3.133E-1 + 3.133e-1 + 3.133E+2 + 3.133e-2 + 4 * (2 - 1)^2";
 			//string input = "#a222 + #1a.22a";
 			Lexer lexer = new(input);
-			var tokens = lexer.GetTokens();
+			List<Token> tokens = lexer.GetTokens();
 
-			foreach (var token in tokens) {
-				Console.WriteLine(token);
-			}
+			// Use string.Join to optimize printing
+			string tokensString = string.Join(Environment.NewLine, tokens);
 
-			/*NewLexer lexere = new(input);
-			var tokense = lexer.GetTokens();
+			// Print all tokens at once
+			Console.WriteLine(tokensString);
 
-			foreach (var token in tokense) {
-				Console.WriteLine(token);
-			}*/
-			/*LexerMod lexer = new (input);
-			var tokens = lexer.Tokenize();
-			tokens.ToList().ForEach(t => Console.WriteLine(t));*/
+
 			Console.WriteLine("Premi Invio per continuare...");
 			if (Console.ReadLine().Equals("e")) {
 				Environment.Exit(0);
