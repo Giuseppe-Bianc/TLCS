@@ -16,7 +16,7 @@ namespace TLCS {
 		private int _pos;
 		private int _linea;
 		private int _colonna;
-		public Lexer([ConstantExpected]String input) {
+		public Lexer(String input) {
 			_input = input;
 			_inputLen = input.Length;
 			_pos = 0;
