@@ -75,66 +75,7 @@ namespace TLCS {
 			};
 		}
 
-		public Token GetNextTokenM() {
-			IgnoraSpazi();
-
-			if (_pos >= _inputLen) {
-				return Token.CreateEndOfFileToken(_linea, _colonna);
-			}
-
-			char currentChar = InputSpan[_pos];
-			Avanza();
-
-			return currentChar switch {
-				var digit when char.IsDigit(digit) => ProcessNumberTokenM(currentChar),
-				var letter when char.IsLetter(letter) => ProcessIdentifierTokenM(currentChar),
-				'+' or '-' or '*' or '/' or '(' or ')' or '^' or '#' => new Token(TokenType.Operatore, currentChar.ToString(), _linea, _colonna - 1),
-				_ => throw new InvalidOperationException($"Carattere non riconosciuto:{currentChar.ASCIIUnicode()}"),
-			};
-		}
-
 		private Token ProcessNumberToken(char startChar) {
-			builder.Clear();
-			builder.Append(startChar);
-
-			while (_pos < _inputLen && (char.IsDigit(InputSpan[_pos]) || InputSpan[_pos] == '.')) {
-				if (InputSpan[_pos] == '.') {
-					if (_pos + 1 < _inputLen && char.IsDigit(InputSpan[_pos + 1])) {
-						builder.Append(InputSpan[_pos]);
-						Avanza();
-					} else {
-						break;
-					}
-				}
-
-				builder.Append(InputSpan[_pos]);
-				Avanza();
-			}
-
-			if (_pos < _inputLen && (InputSpan[_pos] == 'E' || InputSpan[_pos] == 'e')) {
-				builder.Append(InputSpan[_pos]);
-				Avanza();
-
-				if (_pos < _inputLen && (InputSpan[_pos] == '+' || InputSpan[_pos] == '-')) {
-					builder.Append(InputSpan[_pos]);
-					Avanza();
-				}
-
-				while (_pos < _inputLen && char.IsDigit(InputSpan[_pos])) {
-					builder.Append(InputSpan[_pos]);
-					Avanza();
-				}
-			}
-
-			string numero = builder.ToString();
-
-			return numero.Contains('.') ?
-				new Token(TokenType.Reale, numero, _linea, _colonna - numero.Length) :
-				new Token(TokenType.Intero, numero, _linea, _colonna - numero.Length);
-		}
-
-
-		private Token ProcessNumberTokenM(char startChar) {
 			builder.Clear();
 			builder.Append(startChar);
 
@@ -179,20 +120,6 @@ namespace TLCS {
 			builder.Clear();
 			builder.Append(startChar);
 
-			while (_pos < _inputLen && (char.IsLetterOrDigit(InputSpan[_pos]) || InputSpan[_pos] == '_')) {
-				builder.Append(InputSpan[_pos]);
-				Avanza();
-			}
-
-			string identificatore = builder.ToString();
-
-			return new Token(TokenType.Identificatore, identificatore, _linea, _colonna - identificatore.Length);
-		}
-
-		private Token ProcessIdentifierTokenM(char startChar) {
-			builder.Clear();
-			builder.Append(startChar);
-
 			while (_pos < _inputLen && InputSpan[_pos].IsLetterOrDigitOrUnderscore()) {
 				builder.Append(InputSpan[_pos]);
 				Avanza();
@@ -225,29 +152,6 @@ namespace TLCS {
 
 			return CollectionsMarshal.AsSpan(tokens);
 		}
-
-		/*public List<Token> GetTokensM() {
-			List<Token> tokens = new();
-
-			Token token;
-			while ((token = GetNextTokenM()).Tipo != TokenType.FineRiga) {
-				tokens.Add(token);
-			}
-
-			return tokens;
-
-		}
-
-		public Span<Token> GetTokensSpanM() {
-			List<Token> tokens = new();
-
-			Token token;
-			while ((token = GetNextTokenM()).Tipo != TokenType.FineRiga) {
-				tokens.Add(token);
-			}
-
-			return CollectionsMarshal.AsSpan(tokens);
-		}*/
 
 	}
 }
