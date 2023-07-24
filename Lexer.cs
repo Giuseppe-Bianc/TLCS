@@ -1,22 +1,37 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Runtime.InteropServices;
 using System.Text;
 
 namespace TLCS {
-	public static class CharExtensions {
+	public static class Extensions {
 		public static string ASCIIUnicode(this char c) {
 			int asciiValue = c;
 			return $" {c} ASCII: {asciiValue} Unicode: U-{asciiValue:X4}";
 		}
+
+		public static bool IsLetterOrDigitOrUnderscore(this char c) {
+			return char.IsLetterOrDigit(c) || c == '_';
+		}
+
+		public static bool IsNumberOrPoint(this char c) {
+			return char.IsDigit(c) || c == '.';
+		}
+		public static bool EqualsIgnoreCase(this string str1, string str2) {
+			return string.Equals(str1, str2, StringComparison.OrdinalIgnoreCase);
+		}
+
+		public static bool EqualsIgnoreCase(this char c1, char c2) {
+			return char.ToUpperInvariant(c1).Equals(char.ToUpperInvariant(c2));
+		}
 	}
 	public class Lexer {
-		private readonly String _input;
+		private readonly string _input;
 		private readonly int _inputLen;
 		private readonly StringBuilder builder = new();
 		private ReadOnlySpan<char> InputSpan => _input.AsSpan();
 		private int _pos;
 		private int _linea;
 		private int _colonna;
-		public Lexer(String input) {
+		public Lexer(string input) {
 			_input = input;
 			_inputLen = input.Length;
 			_pos = 0;
@@ -29,11 +44,7 @@ namespace TLCS {
 			_colonna++;
 		}
 
-		private char CarattereCorrente() {
-			return _pos >= _inputLen ? '\0' : InputSpan[_pos];
-		}
-
-		private char CarattereCorrenteMod() => _pos >= _inputLen ? '\0' : InputSpan[_pos];
+		private char CarattereCorrente() => _pos >= _inputLen ? '\0' : InputSpan[_pos];
 
 		private void IgnoraSpazi() {
 			while (char.IsWhiteSpace(CarattereCorrente())) {
@@ -46,164 +57,151 @@ namespace TLCS {
 			}
 		}
 
-		private void IgnoraSpaziMod() {
-			while (char.IsWhiteSpace(CarattereCorrenteMod())) {
-				if (CarattereCorrenteMod() == '\n') {
-					_linea++;
-					_colonna = 1;
-				}
-
-				Avanza();
-			}
-		}
-
-
 		public Token GetNextToken() {
 			IgnoraSpazi();
 
 			if (_pos >= _inputLen) {
-				return new Token(TokenType.FineRiga, string.Empty, _linea, _colonna);
+				return Token.CreateEndOfFileToken(_linea, _colonna);
 			}
 
 			char currentChar = InputSpan[_pos];
 			Avanza();
 
-
-			if (char.IsDigit(currentChar)) {
-				builder.Clear();
-				builder.Append(currentChar);
-
-				while (_pos < _inputLen && (char.IsDigit(InputSpan[_pos]) || InputSpan[_pos] == '.')) {
-					if (InputSpan[_pos] == '.') {
-						if (_pos + 1 < _inputLen && char.IsDigit(InputSpan[_pos + 1])) {
-							builder.Append(InputSpan[_pos]);
-							Avanza();
-						} else {
-							break;
-						}
-					}
-
-					builder.Append(InputSpan[_pos]);
-					Avanza();
-				}
-
-				if (_pos < _inputLen && (InputSpan[_pos] == 'E' || InputSpan[_pos] == 'e')) {
-					builder.Append(InputSpan[_pos]);
-					Avanza();
-
-					if (_pos < _inputLen && (InputSpan[_pos] == '+' || InputSpan[_pos] == '-')) {
-						builder.Append(InputSpan[_pos]);
-						Avanza();
-					}
-
-					while (_pos < _inputLen && char.IsDigit(InputSpan[_pos])) {
-						builder.Append(InputSpan[_pos]);
-						Avanza();
-					}
-				}
-
-				string numero = builder.ToString();
-
-				if (numero.Contains('.')) {
-					return new Token(TokenType.Reale, numero, _linea, _colonna - numero.Length);
-				}
-
-				return new Token(TokenType.Intero, numero, _linea, _colonna - numero.Length);
-			}
-
-			if (char.IsLetter(currentChar)) {
-				builder.Clear();
-				builder.Append(currentChar);
-
-				while (_pos < _inputLen && (char.IsLetterOrDigit(InputSpan[_pos]) || InputSpan[_pos] == '_')) {
-					builder.Append(currentChar);
-					Avanza();
-				}
-
-				string identificatore = builder.ToString();
-
-				return new Token(TokenType.Identificatore, identificatore, _linea, _colonna - identificatore.Length);
-			}
-
 			return currentChar switch {
+				var digit when char.IsDigit(digit) => ProcessNumberToken(currentChar),
+				var letter when char.IsLetter(letter) => ProcessIdentifierToken(currentChar),
 				'+' or '-' or '*' or '/' or '(' or ')' or '^' or '#' => new Token(TokenType.Operatore, currentChar.ToString(), _linea, _colonna - 1),
 				_ => throw new InvalidOperationException($"Carattere non riconosciuto:{currentChar.ASCIIUnicode()}"),
 			};
 		}
 
-		public Token GetNextTokenMod() {
-			IgnoraSpaziMod();
+		public Token GetNextTokenM() {
+			IgnoraSpazi();
 
 			if (_pos >= _inputLen) {
-				return new Token(TokenType.FineRiga, string.Empty, _linea, _colonna);
+				return Token.CreateEndOfFileToken(_linea, _colonna);
 			}
 
 			char currentChar = InputSpan[_pos];
 			Avanza();
 
-
-			if (char.IsDigit(currentChar)) {
-				builder.Clear();
-				builder.Append(currentChar);
-
-				while (_pos < _inputLen && (char.IsDigit(InputSpan[_pos]) || InputSpan[_pos] == '.')) {
-					if (InputSpan[_pos] == '.') {
-						if (_pos + 1 < _inputLen && char.IsDigit(InputSpan[_pos + 1])) {
-							builder.Append(InputSpan[_pos]);
-							Avanza();
-						} else {
-							break;
-						}
-					}
-
-					builder.Append(InputSpan[_pos]);
-					Avanza();
-				}
-
-				if (_pos < _inputLen && (char.ToLower(InputSpan[_pos]).Equals('e'))) {
-					builder.Append(InputSpan[_pos]);
-					Avanza();
-
-					if (_pos < _inputLen && (InputSpan[_pos] == '+' || InputSpan[_pos] == '-')) {
-						builder.Append(InputSpan[_pos]);
-						Avanza();
-					}
-
-					while (_pos < _inputLen && char.IsDigit(InputSpan[_pos])) {
-						builder.Append(InputSpan[_pos]);
-						Avanza();
-					}
-				}
-
-				string numero = builder.ToString();
-
-				if (numero.Contains('.')) {
-					return new Token(TokenType.Reale, numero, _linea, _colonna - numero.Length);
-				}
-
-				return new Token(TokenType.Intero, numero, _linea, _colonna - numero.Length);
-			}
-
-			if (char.IsLetter(currentChar)) {
-				builder.Clear();
-				builder.Append(currentChar);
-
-				while (_pos < _inputLen && (char.IsLetterOrDigit(InputSpan[_pos]) || InputSpan[_pos] == '_')) {
-					builder.Append(currentChar);
-					Avanza();
-				}
-
-				string identificatore = builder.ToString();
-
-				return new Token(TokenType.Identificatore, identificatore, _linea, _colonna - identificatore.Length);
-			}
-
 			return currentChar switch {
+				var digit when char.IsDigit(digit) => ProcessNumberTokenM(currentChar),
+				var letter when char.IsLetter(letter) => ProcessIdentifierTokenM(currentChar),
 				'+' or '-' or '*' or '/' or '(' or ')' or '^' or '#' => new Token(TokenType.Operatore, currentChar.ToString(), _linea, _colonna - 1),
 				_ => throw new InvalidOperationException($"Carattere non riconosciuto:{currentChar.ASCIIUnicode()}"),
 			};
 		}
 
+		private Token ProcessNumberToken(char startChar) {
+			builder.Clear();
+			builder.Append(startChar);
+
+			while (_pos < _inputLen && (char.IsDigit(InputSpan[_pos]) || InputSpan[_pos] == '.')) {
+				if (InputSpan[_pos] == '.') {
+					if (_pos + 1 < _inputLen && char.IsDigit(InputSpan[_pos + 1])) {
+						builder.Append(InputSpan[_pos]);
+						Avanza();
+					} else {
+						break;
+					}
+				}
+
+				builder.Append(InputSpan[_pos]);
+				Avanza();
+			}
+
+			if (_pos < _inputLen && (InputSpan[_pos] == 'E' || InputSpan[_pos] == 'e')) {
+				builder.Append(InputSpan[_pos]);
+				Avanza();
+
+				if (_pos < _inputLen && (InputSpan[_pos] == '+' || InputSpan[_pos] == '-')) {
+					builder.Append(InputSpan[_pos]);
+					Avanza();
+				}
+
+				while (_pos < _inputLen && char.IsDigit(InputSpan[_pos])) {
+					builder.Append(InputSpan[_pos]);
+					Avanza();
+				}
+			}
+
+			string numero = builder.ToString();
+
+			return numero.Contains('.') ?
+				new Token(TokenType.Reale, numero, _linea, _colonna - numero.Length) :
+				new Token(TokenType.Intero, numero, _linea, _colonna - numero.Length);
+		}
+
+
+		private Token ProcessNumberTokenM(char startChar) {
+			builder.Clear();
+			builder.Append(startChar);
+
+			while (_pos < _inputLen && InputSpan[_pos].IsNumberOrPoint()) {
+				if (InputSpan[_pos] == '.') {
+					if (_pos + 1 < _inputLen && char.IsDigit(InputSpan[_pos + 1])) {
+						builder.Append(InputSpan[_pos]);
+						Avanza();
+					} else {
+						break;
+					}
+				}
+
+				builder.Append(InputSpan[_pos]);
+				Avanza();
+			}
+
+			if (_pos < _inputLen && (InputSpan[_pos].EqualsIgnoreCase('e'))) {
+				builder.Append(InputSpan[_pos]);
+				Avanza();
+
+				if (_pos < _inputLen && (InputSpan[_pos] == '+' || InputSpan[_pos] == '-')) {
+					builder.Append(InputSpan[_pos]);
+					Avanza();
+				}
+
+				while (_pos < _inputLen && char.IsDigit(InputSpan[_pos])) {
+					builder.Append(InputSpan[_pos]);
+					Avanza();
+				}
+			}
+
+			string numero = builder.ToString();
+
+			return numero.Contains('.') ?
+				new Token(TokenType.Reale, numero, _linea, _colonna - numero.Length) :
+				new Token(TokenType.Intero, numero, _linea, _colonna - numero.Length);
+		}
+
+
+		private Token ProcessIdentifierToken(char startChar) {
+			builder.Clear();
+			builder.Append(startChar);
+
+			while (_pos < _inputLen && (char.IsLetterOrDigit(InputSpan[_pos]) || InputSpan[_pos] == '_')) {
+				builder.Append(InputSpan[_pos]);
+				Avanza();
+			}
+
+			string identificatore = builder.ToString();
+
+			return new Token(TokenType.Identificatore, identificatore, _linea, _colonna - identificatore.Length);
+		}
+
+		private Token ProcessIdentifierTokenM(char startChar) {
+			builder.Clear();
+			builder.Append(startChar);
+
+			while (_pos < _inputLen && InputSpan[_pos].IsLetterOrDigitOrUnderscore()) {
+				builder.Append(InputSpan[_pos]);
+				Avanza();
+			}
+
+			string identificatore = builder.ToString();
+
+			return new Token(TokenType.Identificatore, identificatore, _linea, _colonna - identificatore.Length);
+		}
 
 		public List<Token> GetTokens() {
 			List<Token> tokens = new();
@@ -214,18 +212,42 @@ namespace TLCS {
 			}
 
 			return tokens;
+
 		}
 
-		public List<Token> GetTokensMod() {
+		public Span<Token> GetTokensSpan() {
 			List<Token> tokens = new();
 
 			Token token;
-			while ((token = GetNextTokenMod()).Tipo != TokenType.FineRiga) {
+			while ((token = GetNextToken()).Tipo != TokenType.FineRiga) {
+				tokens.Add(token);
+			}
+
+			return CollectionsMarshal.AsSpan(tokens);
+		}
+
+		/*public List<Token> GetTokensM() {
+			List<Token> tokens = new();
+
+			Token token;
+			while ((token = GetNextTokenM()).Tipo != TokenType.FineRiga) {
 				tokens.Add(token);
 			}
 
 			return tokens;
+
 		}
+
+		public Span<Token> GetTokensSpanM() {
+			List<Token> tokens = new();
+
+			Token token;
+			while ((token = GetNextTokenM()).Tipo != TokenType.FineRiga) {
+				tokens.Add(token);
+			}
+
+			return CollectionsMarshal.AsSpan(tokens);
+		}*/
 
 	}
 }

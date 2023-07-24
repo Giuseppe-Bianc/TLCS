@@ -4,8 +4,6 @@
 		Reale,
 		Identificatore,
 		Operatore,
-		ParentesiAperta,
-		ParentesiChiusa,
 		FineRiga
 	}
 
@@ -146,4 +144,50 @@
 		/// <returns><c>true</c> if the tokens are not equal; otherwise, <c>false</c>.</returns>
 		public static bool operator !=(Token? token1, Token? token2) => !(token1 == token2);
 	}
+
+	[Serializable]
+	public readonly ref struct TokenS {
+		public TokenType Tipo { get; init; }
+		public ReadOnlySpan<char> Valore { get; init; }
+		public int Linea { get; init; }
+		public int Colonna { get; init; }
+
+		public TokenS(TokenType tipo, ReadOnlySpan<char> valore, int linea, int colonna) {
+			if (linea <= 0) {
+				throw new ArgumentOutOfRangeException(nameof(linea), "Il numero di riga deve essere maggiore di zero.");
+			}
+
+			if (colonna < 0) {
+				throw new ArgumentOutOfRangeException(nameof(colonna), "Il numero di colonna deve essere maggiore o uguale a zero.");
+			}
+
+			Tipo = tipo;
+			Valore = valore;
+			Linea = linea;
+			Colonna = colonna;
+		}
+
+
+		public TokenS(TokenType tipo, int linea, int colonna) {
+			if (linea <= 0) {
+				throw new ArgumentOutOfRangeException(nameof(linea), "Il numero di riga deve essere maggiore di zero.");
+			}
+
+			if (colonna < 0) {
+				throw new ArgumentOutOfRangeException(nameof(colonna), "Il numero di colonna deve essere maggiore o uguale a zero.");
+			}
+
+			Tipo = tipo;
+			Valore = ReadOnlySpan<char>.Empty;
+			Linea = linea;
+			Colonna = colonna;
+		}
+
+		public static Token CreateEndOfFileToken(int linea, int colonna) => new(TokenType.FineRiga, linea, colonna);
+
+		public override string ToString() => Tipo == TokenType.FineRiga
+			? $"Token<{Tipo}, EOF> (Linea: {Linea}, Colonna: {Colonna})"
+			: $"Token<{Tipo}, '{Valore.ToString()}'> (Linea: {Linea}, Colonna: {Colonna})";
+	}
+
 }
