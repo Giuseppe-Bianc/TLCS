@@ -39,6 +39,15 @@ namespace TLCS {
 			lexer.GetTokens();
 		}
 
+		[Benchmark]
+		public void LexerEPerf() {
+			lexer.GetTokensE();
+		}
+		[Benchmark]
+		public void LexerSPerf() {
+			lexer.GetTokensS();
+		}
+
 		/*[Benchmark]
 		public void LexerModPerf() {
 			lexer.GetTokensM();
@@ -48,6 +57,8 @@ namespace TLCS {
 		public void AstGeneratorPerf() {
 			astPrinter.PrintAst(ast);
 		}*/
+
+
 
 	}
 }
