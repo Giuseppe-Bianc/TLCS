@@ -1,5 +1,7 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Order;
+using CommandLine;
+using System.Diagnostics;
 using System.Text;
 
 namespace TLCS {
@@ -9,7 +11,8 @@ namespace TLCS {
 	[StopOnFirstError]
 	[SimpleJob(warmupCount: 15, iterationCount: 30)]
 	public class Bencmarks {
-		[Params(1, 100)]
+		//[Params(1, 100)]
+		[Params(1)]
 		public int COUNT { get; set; }
 		private Lexer lexer;
 
@@ -34,21 +37,24 @@ namespace TLCS {
 			lexer = new Lexer(inp.ToString());
 		}
 
-		[Benchmark(Baseline = true)]
+		[Benchmark]
 		public void LexerPerf() {
 			lexer.GetTokens();
 		}
-		/*[Benchmark]
+
+		[Benchmark]
 		public void LexerModPerf() {
 			lexer.GetTokensM();
-		}*/
+		}
 
-		/*[Benchmark]
-		public void AstGeneratorPerf() {
-			astPrinter.PrintAst(ast);
-		}*/
+		[Benchmark]
+		public void AstGenParsPerf() {
+			new ASTGenerator(Costanti.input).Parse();
+		}
 
-
-
+		[Benchmark]
+		public void ParserPerf() {
+			Evaluator.Evaluate(new ASTGenerator(Costanti.input).Parse());
+		}
 	}
 }

@@ -1,9 +1,9 @@
 ﻿using System.Text;
 
 namespace TLCS {
-	public class AstPrinter {
+	public sealed class AstPrinter {
 		public string PrintAst(AstNode node, int indentation = 0) {
-			if (node == null)
+			if (node is null)
 				return string.Empty;
 
 			StringBuilder sb = new();
@@ -38,8 +38,8 @@ namespace TLCS {
 					sb.Append(PrintAst(unaryOpNode.Operand, indentation + 1));
 					break;
 
-				case NodeType.ParenertesiedOperation:
-					var parenNode = (ParenertesiedOperationNode)node;
+				case NodeType.ParenthesizedOperation:
+					var parenNode = (ParenthesizedOperationNode)node;
 					sb.AppendLine($"{indent}ParenertesiedOperation:");
 					sb.Append(PrintAst(parenNode.Expression, indentation + 1));
 					break;

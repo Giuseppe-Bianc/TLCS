@@ -12,12 +12,13 @@ namespace TLCS {
 		public int Value { get; protected init; }
 		public string Name { get; protected set; } = string.Empty;
 		public static IEnumerable<TEnum> GetAllEnumerations() => Enumerations.Values;
-		public static TEnum? FromValue(int value) => Enumerations.TryGetValue(value, out TEnum? enumeration) ? enumeration : default;
+
+		public static TEnum? FromValue(int value) => Enumerations.TryGetValue(value, out TEnum? enumeration) ? enumeration : default!;
 		public static TEnum? FromName(string name) => Enumerations.Values.SingleOrDefault(e => e.Name == name);
 		public bool Equals(Enumeration<TEnum>? other) => other?.GetType() == GetType() && Value == other.Value;
 		public override bool Equals(object? obj) => obj is Enumeration<TEnum> other && Equals(other);
 		public override int GetHashCode() => Value.GetHashCode();
-		public override string? ToString() => Name;
+		public override string ToString() => Name;
 		public static bool operator ==(Enumeration<TEnum>? left, Enumeration<TEnum>? right) => left?.Value == right?.Value;
 		public static bool operator !=(Enumeration<TEnum>? left, Enumeration<TEnum>? right) => !(left == right);
 		private static Dictionary<int, TEnum> CreateEnumeration() {
@@ -29,4 +30,5 @@ namespace TLCS {
 				.ToDictionary(x => x.Value);
 		}
 	}
+
 }

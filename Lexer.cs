@@ -23,7 +23,7 @@ namespace TLCS {
 			return char.ToUpperInvariant(c1).Equals(char.ToUpperInvariant(c2));
 		}
 	}
-	public class Lexer {
+	public sealed class Lexer : IDisposable {
 		private readonly string _input;
 		private readonly int _inputLen;
 		private readonly StringBuilder builder = new();
@@ -37,6 +37,13 @@ namespace TLCS {
 			_pos = 0;
 			_linea = 1;
 			_colonna = 1;
+		}
+
+		public void Dispose() {
+			// Dispose of the StringBuilder instance
+			builder.Clear();
+			builder.Capacity = 0;
+			GC.SuppressFinalize(this);
 		}
 
 		private void Avanza() {
@@ -74,7 +81,23 @@ namespace TLCS {
 				_ => throw new InvalidOperationException($"Carattere non riconosciuto:{currentChar.ASCIIUnicode()}"),
 			};
 		}
+		public Token GetNextTokenM() {
+			IgnoraSpazi();
 
+			if (_pos >= _inputLen) {
+				return Token.CreateEndOfFileToken(_linea, _colonna);
+			}
+
+			char currentChar = InputSpan[_pos];
+			Avanza();
+
+			return currentChar switch {
+				var digit when char.IsDigit(digit) => ProcessNumberTokenM(currentChar),
+				var letter when char.IsLetter(letter) => ProcessIdentifierTokenM(currentChar),
+				'+' or '-' or '*' or '/' or '(' or ')' or '^' or '#' => Token.CreateOperatorToken(currentChar.ToString(), _linea, _colonna - 1),
+				_ => throw new InvalidOperationException($"Carattere non riconosciuto:{currentChar.ASCIIUnicode()}"),
+			};
+		}
 		private Token ProcessNumberToken(char startChar) {
 			builder.Clear();
 			builder.Append(startChar);
@@ -115,6 +138,46 @@ namespace TLCS {
 				new Token(TokenType.Intero, numero, _linea, _colonna - numero.Length);
 		}
 
+		private Token ProcessNumberTokenM(char startChar) {
+			builder.Clear();
+			builder.Append(startChar);
+
+			while (_pos < _inputLen && InputSpan[_pos].IsNumberOrPoint()) {
+				if (InputSpan[_pos] == '.') {
+					if (_pos + 1 < _inputLen && char.IsDigit(InputSpan[_pos + 1])) {
+						builder.Append(InputSpan[_pos]);
+						Avanza();
+					} else {
+						break;
+					}
+				}
+
+				builder.Append(InputSpan[_pos]);
+				Avanza();
+			}
+
+			if (_pos < _inputLen && (InputSpan[_pos].EqualsIgnoreCase('e'))) {
+				builder.Append(InputSpan[_pos]);
+				Avanza();
+
+				if (_pos < _inputLen && (InputSpan[_pos] == '+' || InputSpan[_pos] == '-')) {
+					builder.Append(InputSpan[_pos]);
+					Avanza();
+				}
+
+				while (_pos < _inputLen && char.IsDigit(InputSpan[_pos])) {
+					builder.Append(InputSpan[_pos]);
+					Avanza();
+				}
+			}
+
+			string numero = builder.ToString();
+
+			return numero.Contains('.') ?
+				Token.CreateRealToken(numero, _linea, _colonna - numero.Length) :
+				Token.CreateIntToken(numero, _linea, _colonna - numero.Length);
+		}
+
 		private Token ProcessIdentifierToken(char startChar) {
 			builder.Clear();
 			builder.Append(startChar);
@@ -129,11 +192,37 @@ namespace TLCS {
 			return new Token(TokenType.Identificatore, identificatore, _linea, _colonna - identificatore.Length);
 		}
 
+		private Token ProcessIdentifierTokenM(char startChar) {
+			builder.Clear();
+			builder.Append(startChar);
+
+			while (_pos < _inputLen && InputSpan[_pos].IsLetterOrDigitOrUnderscore()) {
+				builder.Append(InputSpan[_pos]);
+				Avanza();
+			}
+
+			string identificatore = builder.ToString();
+
+			return Token.CreateIdentifierToken(identificatore, _linea, _colonna - identificatore.Length);
+		}
+
 		public List<Token> GetTokens() {
 			List<Token> tokens = new();
 
 			Token token;
 			while ((token = GetNextToken()).Tipo != TokenType.FineRiga) {
+				tokens.Add(token);
+			}
+
+			return tokens;
+
+		}
+
+		public List<Token> GetTokensM() {
+			List<Token> tokens = new();
+
+			Token token;
+			while ((token = GetNextTokenM()).Tipo != TokenType.FineRiga) {
 				tokens.Add(token);
 			}
 

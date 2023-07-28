@@ -1,86 +1,38 @@
-﻿namespace TLCS {
+﻿using System.Collections.Immutable;
+
+namespace TLCS {
 	public enum NodeType {
 		IntegerLiteral,
 		RealLiteral,
 		Identifier,
 		BinaryOperation,
 		UnaryOperation,
-		ParenertesiedOperation
+		ParenthesizedOperation
 	}
 
-	public abstract class AstNode {
-		public NodeType NodeType { get; protected set; }
-	}
+	public abstract record AstNode(NodeType NodeType);
 
-	public abstract class NumberLiteral : AstNode { }
+	public abstract record NumberLiteral(NodeType NodeType) : AstNode(NodeType);
 
-	public class IntegerLiteralNode : NumberLiteral {
-		public int Value { get; set; }
+	public sealed record IntegerLiteralNode(int Value) : NumberLiteral(NodeType.IntegerLiteral);
 
-		public IntegerLiteralNode(int value) {
-			NodeType = NodeType.IntegerLiteral;
-			Value = value;
-		}
-	}
+	public sealed record RealLiteralNode(double Value) : NumberLiteral(NodeType.RealLiteral);
 
-	public class RealLiteralNode : NumberLiteral {
-		public double Value { get; set; }
+	public sealed record IdentifierNode(string Name) : AstNode(NodeType.Identifier);
 
-		public RealLiteralNode(double value) {
-			NodeType = NodeType.RealLiteral;
-			Value = value;
-		}
-	}
+	public sealed record BinaryOperationNode(Token OperatorToken, AstNode Left, AstNode Right) : AstNode(NodeType.BinaryOperation);
 
-	public class IdentifierNode : AstNode {
-		public string Name { get; set; }
+	public sealed record UnaryOperationNode(Token OperatorToken, AstNode Operand) : AstNode(NodeType.UnaryOperation);
 
-		public IdentifierNode(string name) {
-			NodeType = NodeType.Identifier;
-			Name = name;
-		}
+	public sealed record ParenthesizedOperationNode(AstNode Expression) : AstNode(NodeType.ParenthesizedOperation);
 
-	}
-
-	public class BinaryOperationNode : AstNode {
-		public Token OperatorToken { get; set; }
-		public AstNode Left { get; set; }
-		public AstNode Right { get; set; }
-
-		public BinaryOperationNode(Token operatorToken, AstNode left, AstNode right) {
-			NodeType = NodeType.BinaryOperation;
-			OperatorToken = operatorToken;
-			Left = left;
-			Right = right;
-		}
-	}
-
-	public class UnaryOperationNode : AstNode {
-		public Token OperatorToken { get; set; }
-		public AstNode Operand { get; set; }
-
-		public UnaryOperationNode(Token operatorToken, AstNode operand) {
-			NodeType = NodeType.UnaryOperation;
-			OperatorToken = operatorToken;
-			Operand = operand;
-		}
-	}
-
-	public class ParenertesiedOperationNode : AstNode {
-		public AstNode Expression { get; set; }
-
-		public ParenertesiedOperationNode(AstNode operand) {
-			NodeType = NodeType.ParenertesiedOperation;
-			Expression = operand;
-		}
-	}
-
-	public class ASTGenerator {
-		private readonly Lexer lexer;
+	public sealed class ASTGenerator : IDisposable {
 		private readonly List<Token> tokens;
 		private int currentTokenIndex;
 
-		private static readonly Dictionary<string, int> OperatorPrecedence = new() {
+
+		private static readonly Dictionary<string, int> OperatorPrecedence = new Dictionary<string, int>
+		{
 			{ "+", 1 },
 			{ "-", 1 },
 			{ "*", 2 },
@@ -89,67 +41,60 @@
 		};
 
 		public ASTGenerator(string input) {
-			lexer = new Lexer(input);
-			this.tokens = lexer.GetTokens();
+			this.tokens = new Lexer(input).GetTokens();
 			currentTokenIndex = 0;
 		}
 
-		private Token Peek() {
-			return currentTokenIndex < tokens.Count ? tokens[currentTokenIndex] : Token.CreateEndOfFileToken(1, 0);
+		public ASTGenerator(string input, string i) {
+			this.tokens = new Lexer(input).GetTokensM();
+			currentTokenIndex = 0;
 		}
 
-		private Token Consume(TokenType tokenType) {
-			Token currentToken = Peek();
-			if (currentToken.Tipo != tokenType) {
-				throw new InvalidOperationException($"Expected token type: {tokenType}, found: {currentToken.Tipo}");
-			}
-			currentTokenIndex++;
-			return currentToken;
+		public void Dispose() {
+			tokens.Clear();
+			GC.SuppressFinalize(this);
+			// Dispose Lexer instance if necessary
 		}
 
-		private Token Consume(TokenType tokenType, string value) {
-			Token currentToken = Peek();
-			if (currentToken.Tipo == tokenType || currentToken.Valore.Equals(value)) {
-				currentTokenIndex++;
-				return currentToken;
-			}
-			throw new InvalidOperationException($"Expected token type: {tokenType}, found: {currentToken.Tipo}");
-		}
+		private Token Peek() => currentTokenIndex < tokens.Count ? tokens[currentTokenIndex] : Token.CreateEndOfFileToken(1, 0);
+
+		private Token Consume(TokenType tokenType) => Peek().Tipo != tokenType
+			? throw new InvalidOperationException($"Expected token type: {tokenType}, found: {Peek().Tipo}")
+			: tokens[currentTokenIndex++];
+
+		private Token Consume(TokenType tokenType, string value) => (Peek().Tipo, Peek().Valore) == (tokenType, value)
+			? tokens[currentTokenIndex++]
+			: throw new InvalidOperationException($"Expected token type: {tokenType}, found: {Peek().Tipo}");
 
 		private AstNode Factor() {
 			var token = Peek();
-			switch (token.Tipo) {
-				case TokenType.Intero:
-					var integerToken = Consume(TokenType.Intero);
-					return new IntegerLiteralNode(int.Parse(integerToken.Valore));
-				case TokenType.Reale:
-					var realToken = Consume(TokenType.Reale);
-					return new RealLiteralNode(double.Parse(realToken.Valore));
-				case TokenType.Identificatore:
-					var identifierToken = Consume(TokenType.Identificatore);
-					return new IdentifierNode(identifierToken.Valore);
-				case TokenType.Operatore when token.Valore == "(":
-					Consume(TokenType.Operatore);
-					var node = Expression();
-					Consume(TokenType.Operatore, ")"); // Closing parenthesis
-					return new ParenertesiedOperationNode(node);
-				default:
-					throw new InvalidOperationException($"Unexpected token: {token.Tipo}");
-			}
+			return token.Tipo switch {
+				TokenType.Intero => new IntegerLiteralNode(int.Parse(Consume(TokenType.Intero).Valore)),
+				TokenType.Reale => new RealLiteralNode(double.Parse(Consume(TokenType.Reale).Valore)),
+				TokenType.Identificatore => new IdentifierNode(Consume(TokenType.Identificatore).Valore),
+				TokenType.Operatore when token.Valore == "(" => ParenthesizedOperation(),
+				_ => throw new InvalidOperationException($"Unexpected token: {token.Tipo}")
+			};
+		}
+
+		private AstNode ParenthesizedOperation() {
+			Consume(TokenType.Operatore); // Opening parenthesis
+			var node = Expression();
+			Consume(TokenType.Operatore, ")"); // Closing parenthesis
+			return new ParenthesizedOperationNode(node);
 		}
 
 		private AstNode UnaryFactor() {
 			var token = Peek();
-			if (token.Tipo == TokenType.Operatore && (token.Valore == "+" || token.Valore == "-")) {
-				var operatorToken = Consume(TokenType.Operatore);
-				return new UnaryOperationNode(operatorToken, UnaryFactor());
-			}
-			return Factor();
+			return (token.Tipo, token.Valore) switch {
+				(TokenType.Operatore, "+") or (TokenType.Operatore, "-") => new UnaryOperationNode(Consume(TokenType.Operatore), UnaryFactor()),
+				_ => Factor()
+			};
 		}
 
 		private AstNode Exponentiation() {
 			var node = UnaryFactor();
-			while (Peek().Tipo == TokenType.Operatore && OperatorPrecedence.ContainsKey(Peek().Valore) && OperatorPrecedence[Peek().Valore] == 3) {
+			while (OperatorPrecedence.TryGetValue(Peek().Valore, out var precedence) && precedence == 3) {
 				var operatorToken = Consume(TokenType.Operatore);
 				node = new BinaryOperationNode(operatorToken, node, UnaryFactor());
 			}
@@ -158,7 +103,7 @@
 
 		private AstNode Term() {
 			var node = Exponentiation();
-			while (Peek().Tipo == TokenType.Operatore && OperatorPrecedence.ContainsKey(Peek().Valore) && OperatorPrecedence[Peek().Valore] == 2) {
+			while (OperatorPrecedence.TryGetValue(Peek().Valore, out var precedence) && precedence == 2) {
 				var operatorToken = Consume(TokenType.Operatore);
 				node = new BinaryOperationNode(operatorToken, node, Exponentiation());
 			}
@@ -167,15 +112,13 @@
 
 		private AstNode Expression() {
 			var node = Term();
-			while (Peek().Tipo == TokenType.Operatore && OperatorPrecedence.ContainsKey(Peek().Valore) && OperatorPrecedence[Peek().Valore] == 1) {
+			while (OperatorPrecedence.TryGetValue(Peek().Valore, out var precedence) && precedence == 1) {
 				var operatorToken = Consume(TokenType.Operatore);
 				node = new BinaryOperationNode(operatorToken, node, Term());
 			}
 			return node;
 		}
 
-		public AstNode Parse() {
-			return Expression();
-		}
+		public AstNode Parse() => Expression();
 	}
 }
