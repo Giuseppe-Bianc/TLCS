@@ -77,10 +77,11 @@ namespace TLCS {
 			return currentChar switch {
 				var digit when char.IsDigit(digit) => ProcessNumberToken(currentChar),
 				var letter when char.IsLetter(letter) => ProcessIdentifierToken(currentChar),
-				'+' or '-' or '*' or '/' or '(' or ')' or '^' or '#' => new Token(TokenType.Operatore, currentChar.ToString(), _linea, _colonna - 1),
+				'+' or '-' or '*' or '(' or ')' or '^' or '/'or '#' => Token.CreateOperatorToken(currentChar.ToString(), _linea, _colonna - 1),
 				_ => throw new InvalidOperationException($"Carattere non riconosciuto:{currentChar.ASCIIUnicode()}"),
-			};
+			} ;
 		}
+
 		public Token GetNextTokenM() {
 			IgnoraSpazi();
 

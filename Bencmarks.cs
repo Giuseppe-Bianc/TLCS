@@ -11,8 +11,8 @@ namespace TLCS {
 	[StopOnFirstError]
 	[SimpleJob(warmupCount: 15, iterationCount: 30)]
 	public class Bencmarks {
-		//[Params(1, 100)]
-		[Params(1)]
+		[Params(1, 100)]
+		//[Params(1)]
 		public int COUNT { get; set; }
 		private Lexer lexer;
 
@@ -37,7 +37,7 @@ namespace TLCS {
 			lexer = new Lexer(inp.ToString());
 		}
 
-		[Benchmark]
+		[Benchmark(Baseline = true)]
 		public void LexerPerf() {
 			lexer.GetTokens();
 		}
@@ -47,7 +47,7 @@ namespace TLCS {
 			lexer.GetTokensM();
 		}
 
-		[Benchmark]
+		/*[Benchmark]
 		public void AstGenParsPerf() {
 			new ASTGenerator(Costanti.input).Parse();
 		}
@@ -55,6 +55,6 @@ namespace TLCS {
 		[Benchmark]
 		public void ParserPerf() {
 			Evaluator.Evaluate(new ASTGenerator(Costanti.input).Parse());
-		}
+		}*/
 	}
 }

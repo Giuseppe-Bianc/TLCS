@@ -1,6 +1,4 @@
-﻿using System.Collections.Immutable;
-
-namespace TLCS {
+﻿namespace TLCS {
 	public enum NodeType {
 		IntegerLiteral,
 		RealLiteral,

@@ -3,7 +3,7 @@
 		public static double Evaluate(AstNode node) {
 			return node switch {
 				IntegerLiteralNode intLiteralNode => intLiteralNode.Value,
-				RealLiteralNode realLiteralNode => realLiteralNode.Value,
+				RealLiteralNode realLiteralNode => (double)realLiteralNode.Value,
 				IdentifierNode identifierNode => throw new InvalidOperationException($"Identifier '{identifierNode.Name}' not supported in evaluation."),
 				BinaryOperationNode binaryOpNode => EvaluateBinaryOperation(binaryOpNode.OperatorToken.Valore, Evaluate(binaryOpNode.Left), Evaluate(binaryOpNode.Right)),
 				UnaryOperationNode unaryOpNode => EvaluateUnaryOperation(unaryOpNode.OperatorToken.Valore, Evaluate(unaryOpNode.Operand)),
